@@ -5,6 +5,7 @@ from aiogram import F
 from aiogram.types import Message,InlineKeyboardButton
 from data import config
 import asyncio
+import tracemalloc
 import logging
 import sys
 from menucommands.set_bot_commands  import set_default_commands
@@ -16,13 +17,13 @@ from aiogram.fsm.context import FSMContext #new
 from states.reklama import Adverts
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 import time 
-
+import wikipedia
 ADMINS = config.ADMINS
 TOKEN = config.BOT_TOKEN
 CHANNELS = config.CHANNELS
 
 dp = Dispatcher()
-
+wikipedia.set_lang("en")
 
 
 
@@ -32,9 +33,9 @@ async def start_command(message:Message):
     telegram_id = message.from_user.id
     try:
         db.add_user(full_name=full_name,telegram_id=telegram_id) #foydalanuvchi bazaga qo'shildi
-        await message.answer(text="Assalomu alaykum, botimizga hush kelibsiz")
+        await message.answer(text="Assalomu alaykum, botimizga hush kelibsiz/bu bot orqali istagan maʼlumotingizni wikipidiasini bilib olishingiz mumkin")
     except:
-        await message.answer(text="Assalomu alaykum")
+        await message.answer(text="Assalomu alaykum, botimizga hush kelibsiz/bu bot orqali istagan maʼlumotingizni wikipidiasini bilib olishingiz mumkin")
 
 
 @dp.message(IsCheckSubChannels())
@@ -60,7 +61,7 @@ async def help_commands(message:Message):
 #about commands
 @dp.message(Command("about"))
 async def about_commands(message:Message):
-    await message.answer("Sifat 2024")
+    await message.answer("Mening ismim Boborahim ,Rustamqulov Boborahim Alisher o'g'li")
 
 
 @dp.message(Command("admin"),IsBotAdminFilter(ADMINS))
@@ -98,6 +99,21 @@ async def send_advert(message:Message,state:FSMContext):
     await state.clear()
 
 
+
+async def respond(request, lang):
+    wikipedia.set_lang(lang)
+    summary = wikipedia.summary(request)
+    return summary
+
+@dp.message()
+async def sndWike(message: Message):
+    try:
+        summary = await respond(message.text, 'uz')
+        await message.answer(summary)
+    except wikipedia.exceptions.DisambiguationError as e:
+        await message.answer(f"DisambiguationError: {e.options}")
+
+
 @dp.startup()
 async def on_startup_notify(bot: Bot):
     for admin in ADMINS:
@@ -127,7 +143,8 @@ def setup_middlewares(dispatcher: Dispatcher, bot: Bot) -> None:
 
 async def main() -> None:
     global bot,db
-    bot = Bot(TOKEN, parse_mode=ParseMode.HTML)
+    bot = Bot(TOKEN)
+    tracemalloc.start()
     db = Database(path_to_db="main.db")
     db.create_table_users()
     # db.create_table_audios()
